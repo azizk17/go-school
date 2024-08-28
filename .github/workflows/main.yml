@@ -1,0 +1,46 @@
+name: Random File Push
+
+on:
+  schedule:
+    # Run at random times throughout the day, excluding weekends
+    - cron: '30 2 * * 1-5'  # 2:30 AM UTC on weekdays
+    - cron: '15 10 * * 1-5' # 10:15 AM UTC on weekdays
+    - cron: '45 17 * * 1-5' # 5:45 PM UTC on weekdays
+
+jobs:
+  push_random_files:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Skip this run randomly
+      id: skip
+      run: |
+        RAND=$(( RANDOM % 3 + 1 ))
+        if [ $RAND -eq 1 ]; then
+          echo "Skipping this run."
+          exit 0
+        fi
+
+    - name: Checkout source repo
+      uses: actions/checkout@v2
+
+    - name: List all files
+      id: list_files
+      run: |
+        find . -type f ! -path './.git/*' > all_files.txt
+        shuf -n $((RANDOM % 5 + 1)) all_files.txt > selected_files.txt
+      shell: bash
+
+    - name: Configure Git
+      run: |
+        git config --global user.name "Aziz k"
+        git config --global user.email "azizk.dev@gmail.com"
+
+    - name: Prepare selected files for commit
+      run: |
+        xargs -a selected_files.txt git add
+        git commit -m "Random file push"
+        git remote add destination https://azizk17:${{ secrets.DEST_REPO_TOKEN }}@github.com/azizk17/random-push.git
+        git push destination HEAD:main --force
+      env:
+        DEST_REPO_TOKEN: ${{ secrets.DEST_REPO_TOKEN }}
